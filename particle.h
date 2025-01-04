@@ -24,6 +24,27 @@ class Particle{
             position += velocity + acceleration * time_step * time_step;
             acceleration = sf::Vector2f(0,0); // reset after the update
         }
+
+        void constrain_to_bounds(float width, float height, float radius)
+        {   
+            
+            if(position.x < 2*radius) // Ensures the particle's x-coordinate does not go below the specified radius
+            {
+                position.x = 2*radius;
+            }
+            if(position.x > width - 2*radius) // Ensures the particle's x-coordinate does not exceed the screen width minus the specified radius
+            {
+                position.x = width - 2*radius;
+            } 
+            if(position.y < 2*radius) //Ensures the particle's y-coordinate does not go below the specified radius
+            {
+                position.y = 2*radius;
+            }
+            if(position.y > height - 2*radius) // Ensures the particle's y-coordinate does not exceed the screen width minus the specified radius
+            {
+                position.y = height - 2*radius;
+            }
+        }
 };
 
 #endif

@@ -42,6 +42,7 @@ int main()
         {
                 particle.apply_force(sf::Vector2f(0,GRAVITY));
                 particle.update(TIME_STEP);
+                particle.constrain_to_bounds(WIDTH,HEIGHT,PARTICLE_RADIUS);
         }
 
         window.clear(sf::Color::Black);
