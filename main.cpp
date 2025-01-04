@@ -1,9 +1,10 @@
 #include<bits/stdc++.h>
 #include<SFML/Graphics.hpp>
 
-// Adding the custom datatypes
+// Adding the custom headers
 
 #include"particle.h"
+#include"constraint.h"
 
 // Setting some constants needed in the main code
 
@@ -23,9 +24,18 @@ int main()
     sf:: RenderWindow window (sf:: VideoMode(WIDTH,HEIGHT),"Cloth Simulation");
 
     std::vector<Particle> particles;
-    particles.emplace_back(WIDTH/2,HEIGHT/2);
+    particles.emplace_back(WIDTH/2 - 50,HEIGHT/2 - 50);
+    particles.emplace_back(WIDTH/2 + 50,HEIGHT/2 + 50);
+    particles.emplace_back(WIDTH/2 + 50,HEIGHT/2 - 50);
+    particles.emplace_back(WIDTH/2 - 50,HEIGHT/2 + 50);
 
-
+    std::vector<Constraint> constraints;
+    constraints.emplace_back(&particles[0], &particles[1]);
+    constraints.emplace_back(&particles[0], &particles[2]);
+    constraints.emplace_back(&particles[0], &particles[3]);
+    constraints.emplace_back(&particles[1], &particles[2]);
+    constraints.emplace_back(&particles[2], &particles[3]);
+    
     while(window.isOpen())
     {
         sf:: Event event;
@@ -38,11 +48,20 @@ int main()
         }
             // Applying Gravity
 
+        // Apply the constraint
+        for(size_t i = 0; i < 4; i++)
+        {
+            for(auto& constraint : constraints)
+            {
+                constraint.satisfy();
+            }
+        }
+
         for(auto& particle : particles)
         {
+                particle.constrain_to_bounds(WIDTH,HEIGHT,PARTICLE_RADIUS);
                 particle.apply_force(sf::Vector2f(0,GRAVITY));
                 particle.update(TIME_STEP);
-                particle.constrain_to_bounds(WIDTH,HEIGHT,PARTICLE_RADIUS);
         }
 
         window.clear(sf::Color::Black);
@@ -52,7 +71,7 @@ int main()
         {
             sf::CircleShape circle(PARTICLE_RADIUS);
             circle.setFillColor(sf::Color::White);
-            circle.setPosition(particle.position);
+            circle.setPosition(particle.position.x - PARTICLE_RADIUS, particle.position.y - PARTICLE_RADIUS);
             window.draw(circle);
         }
 
