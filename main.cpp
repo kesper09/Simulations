@@ -11,8 +11,8 @@
 const int WIDTH = 1080;
 const int HEIGHT = 640;
 const float PARTICLE_RADIUS = 12.0f;
-const float GRAVITY = 0.98f;
-#define TIME_STEP 1.0f / 180.0f
+const float GRAVITY = 0.35f;
+#define TIME_STEP 1.0f / 120.0f
 
 const int ROW = 15;
 const int COLUMN = 15;
@@ -34,6 +34,7 @@ int main()
     constraints.emplace_back(&particles[0], &particles[2]);
     constraints.emplace_back(&particles[0], &particles[3]);
     constraints.emplace_back(&particles[1], &particles[2]);
+    constraints.emplace_back(&particles[1], &particles[3]);
     constraints.emplace_back(&particles[2], &particles[3]);
     
     while(window.isOpen())
@@ -75,6 +76,15 @@ int main()
             window.draw(circle);
         }
 
+        // Draw constraints as lines
+        for(auto& constraint: constraints)
+        {
+            sf::Vertex lines[] = {
+                sf::Vertex(constraint.p1->position,sf::Color::White),
+                sf::Vertex(constraint.p2->position,sf::Color::White),
+            };
+            window.draw(lines,2,sf::Lines);
+        }
 
         window.display();
     }
