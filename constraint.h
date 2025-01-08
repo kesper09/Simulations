@@ -23,11 +23,11 @@ class Constraint
                 float difference = (current_length - initial_length) / current_length;
                 sf::Vector2f correction = delta * difference * 0.5f * stiffness;
                 
-                p1->position += correction;
-                p2->position -= correction;
+                if(!p1->is_pinned) p1->position += correction;
+                if(!p2->is_pinned) p2->position -= correction;
                 
-                p1->previous_position += correction;
-                p2->previous_position -= correction;
+                if(!p1->is_pinned) p1->previous_position += correction;
+                if(!p2->is_pinned) p2->previous_position -= correction;
             }
         }
 };

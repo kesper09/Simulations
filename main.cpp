@@ -10,32 +10,69 @@
 
 const int WIDTH = 1080;
 const int HEIGHT = 640;
-const float PARTICLE_RADIUS = 12.0f;
+const float PARTICLE_RADIUS = 5.0f;
 const float GRAVITY = 0.35f;
 #define TIME_STEP 1.0f / 120.0f
 
 const int ROW = 15;
 const int COLUMN = 15;
-const float REST_DISTANCE = 30.0f;
+const float REST_DISTANCE = 15.0f;
 
 
 int main()
 {
     sf:: RenderWindow window (sf:: VideoMode(WIDTH,HEIGHT),"Cloth Simulation");
 
+    //Creating multiple points using the ROW and COLUMN and using the preset distance with REST_DISTANCE
     std::vector<Particle> particles;
+    std::vector<Constraint> constraints;
+    
+    // Calculate starting position to center the grid
+    float startX = (WIDTH - (COLUMN - 1) * REST_DISTANCE) / 2;
+    float startY = (HEIGHT - (ROW - 1) * REST_DISTANCE) / 2;
+
+    for(int row = 0; row < ROW; row++)
+    {
+        for(int col = 0; col < COLUMN; col++)
+        {
+            float x = startX + col * REST_DISTANCE;
+            float y = startY + row * REST_DISTANCE;
+            bool pinned = (row == 0);
+            particles.emplace_back(x,y,pinned);
+        }
+    }
+
+    // Setting the constraints
+    for(int row = 0; row < ROW; row++)
+    {
+        for(int col = 0; col < COLUMN; col++)
+        {
+            if(col < COLUMN - 1)
+            {
+                // Horizontal Constraint
+                constraints.emplace_back(&particles[row * COLUMN + col],&particles[row * COLUMN + col + 1]);
+            }
+            if(row < ROW - 1)
+            {
+                // Verticle constraint
+                constraints.emplace_back(&particles[row * COLUMN + col],&particles[(row + 1) * COLUMN + col]);
+            }
+        }
+    }
+
+   /* std::vector<Particle> particles; // Creating the particles
     particles.emplace_back(WIDTH/2 - 50,HEIGHT/2 - 50);
     particles.emplace_back(WIDTH/2 + 50,HEIGHT/2 + 50);
     particles.emplace_back(WIDTH/2 + 50,HEIGHT/2 - 50);
     particles.emplace_back(WIDTH/2 - 50,HEIGHT/2 + 50);
 
-    std::vector<Constraint> constraints;
+    std::vector<Constraint> constraints; // Creating connections between the points
     constraints.emplace_back(&particles[0], &particles[1]);
     constraints.emplace_back(&particles[0], &particles[2]);
     constraints.emplace_back(&particles[0], &particles[3]);
     constraints.emplace_back(&particles[1], &particles[2]);
     constraints.emplace_back(&particles[1], &particles[3]);
-    constraints.emplace_back(&particles[2], &particles[3]);
+    constraints.emplace_back(&particles[2], &particles[3]);*/
     
     while(window.isOpen())
     {
