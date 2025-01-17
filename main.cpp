@@ -1,128 +1,117 @@
 #include<bits/stdc++.h>
 #include<SFML/Graphics.hpp>
-
-// Adding the custom headers
-
 #include"particle.h"
-#include"constraint.h"
-
-// Setting some constants needed in the main code
+#include"input_handler.h"
 
 const int WIDTH = 1080;
 const int HEIGHT = 640;
 const float PARTICLE_RADIUS = 5.0f;
-const float GRAVITY = 0.35f;
-#define TIME_STEP 1.0f / 120.0f
+const float GRAVITY = 0.8f;
+const float TIME_STEP = 1.0f / 8.0f;
 
 const int ROW = 15;
 const int COLUMN = 15;
-const float REST_DISTANCE = 15.0f;
-
+const float REST_DISTANCE = 25.0f;
 
 int main()
 {
-    sf:: RenderWindow window (sf:: VideoMode(WIDTH,HEIGHT),"Cloth Simulation");
+    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Cloth Simulation");
+    window.setFramerateLimit(60);
 
-    //Creating multiple points using the ROW and COLUMN and using the preset distance with REST_DISTANCE
     std::vector<Particle> particles;
     std::vector<Constraint> constraints;
     
-    // Calculate starting position to center the grid
     float startX = (WIDTH - (COLUMN - 1) * REST_DISTANCE) / 2;
-    float startY = (HEIGHT - (ROW - 1) * REST_DISTANCE) / 2;
+    float startY = 50.0f;
 
-    for(int row = 0; row < ROW; row++)
-    {
-        for(int col = 0; col < COLUMN; col++)
-        {
+    // Create particles
+    for(int row = 0; row < ROW; row++) {
+        for(int col = 0; col < COLUMN; col++) {
             float x = startX + col * REST_DISTANCE;
             float y = startY + row * REST_DISTANCE;
-            bool pinned = (row == 0);
-            particles.emplace_back(x,y,pinned);
+            bool pinned = (row == 0 && (col == 0 || col == COLUMN-1));
+            particles.emplace_back(x, y, pinned);
         }
     }
 
-    // Setting the constraints
-    for(int row = 0; row < ROW; row++)
-    {
-        for(int col = 0; col < COLUMN; col++)
-        {
-            if(col < COLUMN - 1)
-            {
-                // Horizontal Constraint
-                constraints.emplace_back(&particles[row * COLUMN + col],&particles[row * COLUMN + col + 1]);
+    // Create constraints
+    for(int row = 0; row < ROW; row++) {
+        for(int col = 0; col < COLUMN; col++) {
+            if(col < COLUMN - 1) {
+                constraints.emplace_back(&particles[row * COLUMN + col], 
+                                      &particles[row * COLUMN + col + 1]);
             }
-            if(row < ROW - 1)
-            {
-                // Verticle constraint
-                constraints.emplace_back(&particles[row * COLUMN + col],&particles[(row + 1) * COLUMN + col]);
+            if(row < ROW - 1) {
+                constraints.emplace_back(&particles[row * COLUMN + col],
+                                      &particles[(row + 1) * COLUMN + col]);
             }
         }
     }
 
-   /* std::vector<Particle> particles; // Creating the particles
-    particles.emplace_back(WIDTH/2 - 50,HEIGHT/2 - 50);
-    particles.emplace_back(WIDTH/2 + 50,HEIGHT/2 + 50);
-    particles.emplace_back(WIDTH/2 + 50,HEIGHT/2 - 50);
-    particles.emplace_back(WIDTH/2 - 50,HEIGHT/2 + 50);
-
-    std::vector<Constraint> constraints; // Creating connections between the points
-    constraints.emplace_back(&particles[0], &particles[1]);
-    constraints.emplace_back(&particles[0], &particles[2]);
-    constraints.emplace_back(&particles[0], &particles[3]);
-    constraints.emplace_back(&particles[1], &particles[2]);
-    constraints.emplace_back(&particles[1], &particles[3]);
-    constraints.emplace_back(&particles[2], &particles[3]);*/
-    
-    while(window.isOpen())
-    {
-        sf:: Event event;
-        while(window.pollEvent(event))
-        {
-            if(event.type == sf::Event::Closed)
-            {
+    while(window.isOpen()) {
+        sf::Event event;
+        while(window.pollEvent(event)) {
+            if(event.type == sf::Event::Closed) {
                 window.close();
             }
+            InputHandler::handle_mouse_click(event, particles, constraints);
         }
-            // Applying Gravity
 
-        // Apply the constraint
-        for(size_t i = 0; i < 4; i++)
-        {
-            for(auto& constraint : constraints)
-            {
-                constraint.satisfy();
+        // Solve constraints multiple times for stability
+        for(size_t i = 0; i < 10; i++) {  // Increased iterations for better stability
+            for(auto& constraint : constraints) {
+                if(constraint.active) {
+                    constraint.satisfy();
+                }
             }
         }
 
-        for(auto& particle : particles)
-        {
-                particle.constrain_to_bounds(WIDTH,HEIGHT,PARTICLE_RADIUS);
-                particle.apply_force(sf::Vector2f(0,GRAVITY));
+        // Check if particles are connected to any active constraints
+        std::vector<bool> has_active_connection(particles.size(), false);
+        for(const auto& constraint : constraints) {
+            if(constraint.active) {
+                int idx1 = constraint.p1 - &particles[0];
+                int idx2 = constraint.p2 - &particles[0];
+                has_active_connection[idx1] = true;
+                has_active_connection[idx2] = true;
+            }
+        }
+
+        // Update particles
+        for(size_t i = 0; i < particles.size(); i++) {
+            auto& particle = particles[i];
+            if(!particle.is_pinned) {
+                // Apply stronger gravity to disconnected particles
+                float gravity_multiplier = has_active_connection[i] ? 1.0f : 1.5f;
+                particle.apply_force(sf::Vector2f(0, GRAVITY * gravity_multiplier));
                 particle.update(TIME_STEP);
+                particle.constrain_to_bounds(WIDTH, HEIGHT);
+            }
         }
 
         window.clear(sf::Color::Black);
 
-            // Drawing the particles as balls
-        for(const auto& particle: particles)
-        {
-            sf::CircleShape circle(PARTICLE_RADIUS);
-            circle.setFillColor(sf::Color::White);
-            circle.setPosition(particle.position.x - PARTICLE_RADIUS, particle.position.y - PARTICLE_RADIUS);
-            window.draw(circle);
+        // Draw constraints
+        for(const auto& constraint : constraints) {
+            if(constraint.active) {
+                sf::Vertex lines[] = {
+                    sf::Vertex(constraint.p1->position, sf::Color::White),
+                    sf::Vertex(constraint.p2->position, sf::Color::White)
+                };
+                window.draw(lines, 2, sf::Lines);
+            }
         }
 
-        // Draw constraints as lines
-        for(auto& constraint: constraints)
-        {
-            sf::Vertex lines[] = {
-                sf::Vertex(constraint.p1->position,sf::Color::White),
-                sf::Vertex(constraint.p2->position,sf::Color::White),
-            };
-            window.draw(lines,2,sf::Lines);
+        // Draw particles
+        for(size_t i = 0; i < particles.size(); i++) {
+            sf::Color color = has_active_connection[i] ? 
+                             sf::Color::White : 
+                             sf::Color(255, 100, 100); // Reddish for disconnected particles
+            sf::Vertex point(particles[i].position, color);
+            window.draw(&point, 1, sf::Points);
         }
 
         window.display();
     }
+    return 0;
 }
